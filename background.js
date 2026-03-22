@@ -252,10 +252,13 @@ class WorkspaceFlowManager {
           tabIds: [tab.id],
           groupId: targetGroup.id
         });
+
+        try {
+          await chrome.tabGroups.update(targetGroup.id, { title: category });
+        } catch (e) { }
       } else {
         const groupId = await chrome.tabs.group({
-          tabIds: [tab.id],
-          createProperties: { windowId: tab.windowId }
+          tabIds: [tab.id]
         });
 
         const colors = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan'];
