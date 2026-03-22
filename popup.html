@@ -1,146 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WorkspaceFlow</title>
   <style>
+    :root {
+      --bg-dark: #0f1115;
+      --bg-card: #16181d;
+      --bg-hover: #1e2128;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
     * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
 
     body {
       width: 380px;
-      min-height: 500px;
+      min-height: 520px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #ea6666 0%, #4b9ea2 100%);
-      color: white;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      overflow-x: hidden;
     }
 
     .header {
-      padding: 20px;
-      text-align: center;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 24px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .header h1 {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
-      margin-bottom: 5px;
+      margin: 0;
+      background: linear-gradient(135deg, #a5b4fc, #818cf8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .header p {
-      font-size: 12px;
-      opacity: 0.8;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
     }
 
     .stats {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.05);
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 20px;
+      background: var(--bg-dark);
     }
 
     .stat {
+      background: var(--bg-card);
+      padding: 12px;
+      border-radius: 12px;
       text-align: center;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      backdrop-filter: blur(5px);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     .stat-value {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 3px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
     }
 
     .stat-label {
       font-size: 10px;
-      opacity: 0.8;
+      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .section {
-      padding: 15px;
+      padding: 0 20px 20px;
     }
 
     .section-title {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
-      margin-bottom: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
     }
 
     .btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: none;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 500;
       transition: all 0.2s ease;
-      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
     }
 
     .btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-1px);
+      background: var(--bg-hover);
+      border-color: var(--text-muted);
     }
 
     .btn-primary {
-      background: rgba(255, 255, 255, 0.9);
-      color: #333;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
       font-weight: 600;
     }
 
     .btn-primary:hover {
-      background: white;
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
 
     .context-list {
-      max-height: 250px;
+      max-height: 200px;
       overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .context-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .context-list::-webkit-scrollbar-track {
+      background: var(--bg-card);
+      border-radius: 4px;
+    }
+
+    .context-list::-webkit-scrollbar-thumb {
+      background: var(--bg-hover);
+      border-radius: 4px;
     }
 
     .context-item {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       padding: 12px;
       margin-bottom: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
-      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .context-item:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateX(4px);
+      border-color: var(--accent);
+      transform: translateY(-1px);
     }
 
     .context-item.active {
-      background: rgba(255, 255, 255, 0.3);
-      border-color: rgba(255, 255, 255, 0.4);
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.1);
     }
 
     .context-name {
       font-weight: 600;
       font-size: 13px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      color: var(--text-main);
     }
 
     .context-meta {
       font-size: 11px;
-      opacity: 0.8;
+      color: var(--text-muted);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -152,48 +202,58 @@
       gap: 8px;
     }
 
+    .tab-count {
+      background: var(--bg-hover);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
     .context-actions {
       display: flex;
-      gap: 5px;
+      gap: 6px;
     }
 
     .context-actions button {
-      background: none;
+      background: transparent;
       border: none;
-      color: white;
+      color: var(--text-muted);
       cursor: pointer;
-      opacity: 0.7;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
       font-size: 12px;
-      padding: 2px 4px;
-      border-radius: 3px;
     }
 
     .context-actions button:hover {
-      opacity: 1;
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--bg-hover);
+      color: var(--text-main);
     }
 
     .quick-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-top: 15px;
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 30px 15px;
-      opacity: 0.7;
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.2s ease;
     }
 
-    .empty-state-icon {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-
-    .empty-state-text {
-      font-size: 13px;
-      line-height: 1.4;
+    .icon-btn:hover {
+      background: var(--bg-hover);
+      transform: translateY(-1px);
     }
 
     .loading {
@@ -206,65 +266,57 @@
     .spinner {
       width: 20px;
       height: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top: 2px solid white;
+      border: 2px solid var(--border);
+      border-top: 2px solid var(--accent);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
 
+    .empty-state {
+      text-align: center;
+      padding: 30px 15px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state-text {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+      0% {
+        transform: rotate(0deg);
+      }
 
-    .tab-count {
-      background: rgba(255, 255, 255, 0.3);
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-size: 10px;
-      font-weight: 600;
-    }
-
-    .keyboard-shortcut {
-      font-size: 10px;
-      opacity: 0.6;
-      font-family: monospace;
-    }
-
-    /* Scrollbar styling */
-    .context-list::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .context-list::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
-    }
-
-    .context-list::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 2px;
-    }
-
-    .context-list::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.5);
+      100% {
+        transform: rotate(360deg);
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="header">
-    <h1>WorkspaceFlow</h1>
-    <p>Smart Tab Management</p>
+    <div>
+      <h1>WorkspaceFlow</h1>
+      <p>Intelligent AI Tab Groups</p>
+    </div>
+    <button class="icon-btn" id="optionsBtn" title="AI Settings">⚙️</button>
   </div>
 
   <div class="stats">
     <div class="stat">
       <div class="stat-value" id="totalTabs">-</div>
-      <div class="stat-label">Open Tabs</div>
+      <div class="stat-label">Tabs</div>
     </div>
     <div class="stat">
       <div class="stat-value" id="totalContexts">-</div>
-      <div class="stat-label">Contexts</div>
+      <div class="stat-label">Workspaces</div>
     </div>
     <div class="stat">
       <div class="stat-value" id="activeContext">-</div>
@@ -275,9 +327,8 @@
   <div class="section">
     <div class="section-title">
       <span>Workspaces</span>
-      <button class="btn" id="saveContextBtn">
-        💾 Save Current
-      </button>
+      <button class="btn" id="saveContextBtn" style="width: auto; padding: 4px 10px; font-size: 10px;">✚ Save
+        Current</button>
     </div>
 
     <div id="contextList" class="context-list">
@@ -285,32 +336,27 @@
         <div class="spinner"></div>
       </div>
     </div>
-
-    <div class="quick-actions">
-      <button class="btn btn-primary" id="organizeTabsBtn">
-        🎯 Auto-Organize
-      </button>
-      <button class="btn" id="cleanupTabsBtn">
-        🧹 Cleanup Tabs
-      </button>
-    </div>
   </div>
 
   <div class="section">
-    <div class="section-title">
-      <span>Quick Actions</span>
-      <span class="keyboard-shortcut">Ctrl+Shift+S</span>
+    <div class="section-title">AI & Quick Actions</div>
+    <div class="quick-actions" style="margin-bottom: 10px;">
+      <button class="btn btn-primary" id="organizeTabsBtn" style="grid-column: span 2;">
+        ✨ Auto-Organize Everything
+      </button>
     </div>
     <div class="quick-actions">
-      <button class="btn" id="suspendTabsBtn">
-        ⏸️ Suspend Inactive
-      </button>
-      <button class="btn" id="exportContextBtn">
-        📤 Export Context
+      <button class="btn" id="cleanupTabsBtn">🧹 Cleanup</button>
+      <button class="btn" id="suspendTabsBtn">⏸️ Suspend</button>
+    </div>
+    <div class="quick-actions" style="margin-top: 10px;">
+      <button class="btn" id="exportContextBtn" style="grid-column: span 2;">
+        📤 Export Layout Data
       </button>
     </div>
   </div>
 
   <script src="popup.js"></script>
 </body>
+
 </html>

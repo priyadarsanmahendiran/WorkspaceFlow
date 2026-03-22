@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>WorkspaceFlow Settings</title>
+  <style>
+    :root {
+      --bg-dark: #0f1115;
+      --bg-card: #16181d;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #10b981;
+      --error: #ef4444;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 60px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      background: var(--bg-card);
+      padding: 40px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      max-width: 500px;
+      width: 100%;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #a5b4fc, #818cf8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .settings-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      display: block;
+      line-height: 1.5;
+    }
+
+    .help-text a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .help-text a:hover {
+      text-decoration: underline;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      font-weight: 400;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .checkbox-label input {
+      margin-right: 12px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      width: 100%;
+      transition: all 0.2s ease;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      display: none;
+      font-size: 14px;
+      text-align: center;
+      font-weight: 500;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .status-success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .status-error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border: 1px solid var(--error);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1><img src="icons/icon32.png" alt="Icon" width="28" height="28" style="vertical-align: middle;"> WorkspaceFlow AI
+    </h1>
+
+    <div class="settings-group">
+      <label for="aiModel">AI Provider</label>
+      <select id="aiModel">
+        <option value="gemini-1.5-flash">Google Gemini (1.5 Flash - Best value)</option>
+      </select>
+    </div>
+
+    <div class="settings-group">
+      <label for="apiKey">Gemini API Key</label>
+      <input type="password" id="apiKey" placeholder="AIzaSy...">
+      <span class="help-text">Get a free API key from <a href="https://aistudio.google.com/app/apikey"
+          target="_blank">Google AI Studio</a>. It's stored locally and never shared.</span>
+    </div>
+
+    <div class="settings-group">
+      <label class="checkbox-label">
+        <input type="checkbox" id="autoGroupSelect">
+        Enable Auto-Grouping via AI
+      </label>
+      <span class="help-text">Automatically group new tabs into visual categories within the Chrome Tab Strip.</span>
+    </div>
+
+    <button id="saveBtn">Save Configuration</button>
+    <div id="status"></div>
+  </div>
+  <script src="options.js"></script>
+</body>
+
+</html>
