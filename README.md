@@ -35,3 +35,7 @@ We request exactly what we need for maximum functionality:
 - `scripting` - Used for suspending tabs cleanly.
 
 *All data and API keys live solely inside your browser. No middleman servers.*
+
+## License 📄
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
