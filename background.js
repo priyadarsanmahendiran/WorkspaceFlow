@@ -74,6 +74,26 @@ class WorkspaceFlowManager {
         this.groupTabWithAI(tab).catch(console.error);
       }
     }
+
+    // Monitor manual tab group changes to update AI category cache
+    if (changeInfo.groupId !== undefined && changeInfo.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+      try {
+        const group = await chrome.tabGroups.get(changeInfo.groupId);
+        if (group && group.title && tab.url) {
+          const domain = this.extractDomain(tab.url);
+          if (domain && domain !== 'unknown') {
+            const existingCategory = this.aiCategoryCache.get(domain);
+            if (existingCategory !== group.title) {
+              this.aiCategoryCache.set(domain, group.title);
+              await this.saveStoredData();
+              console.log(`Updated AI Category Cache for ${domain} to "${group.title}"`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error updating category cache from manual group change:", error);
+      }
+    }
   }
 
   async onTabActivated(activeInfo) {
@@ -267,6 +287,10 @@ class WorkspaceFlowManager {
           return a & a;
         }, 0);
         const color = colors[Math.abs(hash) % colors.length];
+
+        // Small delay to address a known Chrome API bug where TabGroup UI 
+        // doesn't immediately reflect title/color changes on creation.
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         await chrome.tabGroups.update(groupId, {
           title: category,
