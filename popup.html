@@ -310,28 +310,18 @@
   </div>
 
   <div class="stats">
-    <div class="stat">
+    <div class="stat" style="grid-column: span 3;">
       <div class="stat-value" id="totalTabs">-</div>
-      <div class="stat-label">Tabs</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="totalContexts">-</div>
-      <div class="stat-label">Workspaces</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="activeContext">-</div>
-      <div class="stat-label">Active</div>
+      <div class="stat-label">Total Active Tabs</div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">
-      <span>Workspaces</span>
-      <button class="btn" id="saveContextBtn" style="width: auto; padding: 4px 10px; font-size: 10px;">✚ Save
-        Current</button>
+      <span>Active Tab Groups</span>
     </div>
 
-    <div id="contextList" class="context-list">
+    <div id="groupList" class="context-list">
       <div class="loading">
         <div class="spinner"></div>
       </div>
@@ -346,13 +336,7 @@
       </button>
     </div>
     <div class="quick-actions">
-      <button class="btn" id="cleanupTabsBtn">🧹 Cleanup</button>
-      <button class="btn" id="suspendTabsBtn">⏸️ Suspend</button>
-    </div>
-    <div class="quick-actions" style="margin-top: 10px;">
-      <button class="btn" id="exportContextBtn" style="grid-column: span 2;">
-        📤 Export Layout Data
-      </button>
+      <button class="btn" id="cleanupTabsBtn" style="grid-column: span 2;">🧹 Cleanup</button>
     </div>
   </div>
 

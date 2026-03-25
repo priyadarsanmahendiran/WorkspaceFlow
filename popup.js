@@ -1,8 +1,7 @@
 // WorkspaceFlow Popup Interface
 class PopupInterface {
   constructor() {
-    this.contexts = [];
-    this.currentContext = null;
+    this.groups = [];
     this.tabMetadata = [];
     this.init();
   }
@@ -21,11 +20,6 @@ class PopupInterface {
   }
 
   setupEventListeners() {
-    // Save context button
-    document.getElementById('saveContextBtn').addEventListener('click', () => {
-      this.saveCurrentContext();
-    });
-
     // Auto-organize button
     document.getElementById('organizeTabsBtn').addEventListener('click', () => {
       this.autoOrganizeTabs();
@@ -34,16 +28,6 @@ class PopupInterface {
     // Cleanup tabs button
     document.getElementById('cleanupTabsBtn').addEventListener('click', () => {
       this.cleanupTabs();
-    });
-
-    // Suspend tabs button
-    document.getElementById('suspendTabsBtn').addEventListener('click', () => {
-      this.suspendInactiveTabs();
-    });
-
-    // Export context button
-    document.getElementById('exportContextBtn').addEventListener('click', () => {
-      this.exportCurrentContext();
     });
 
     // Options button
@@ -55,31 +39,48 @@ class PopupInterface {
       }
     });
 
-    // Listen for updates from background script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.type === 'contextUpdated') {
-        this.loadData().then(() => this.render());
-      }
-    });
+    // Listen for tab/group changes to refresh UI
+    chrome.tabs.onUpdated.addListener(() => this.refreshData());
+    chrome.tabs.onRemoved.addListener(() => this.refreshData());
+    chrome.tabGroups.onUpdated.addListener(() => this.refreshData());
+    chrome.tabGroups.onRemoved.addListener(() => this.refreshData());
+  }
+
+  async getActiveWindowId() {
+    const window = await chrome.windows.getLastFocused({ populate: false });
+    return window.id;
   }
 
   async loadData() {
     try {
-      // Get contexts from background script
-      const contextsResponse = await this.sendMessage({ action: 'getContexts' });
-      this.contexts = contextsResponse.contexts || [];
+      const windowId = await this.getActiveWindowId();
 
-      // Get current context
-      const currentResponse = await this.sendMessage({ action: 'getCurrentContext' });
-      this.currentContext = currentResponse.context;
+      // Get all tab groups in the active window
+      const groups = await chrome.tabGroups.query({ windowId: windowId });
 
-      // Get tab metadata
+      // Get tabs to count them per group
+      const tabs = await chrome.tabs.query({ windowId: windowId });
+
+      this.groups = groups.map(group => {
+        const groupTabs = tabs.filter(t => t.groupId === group.id);
+        return {
+          ...group,
+          tabCount: groupTabs.length
+        };
+      });
+
+      // Get tab metadata from background script
       const metadataResponse = await this.sendMessage({ action: 'getTabMetadata' });
       this.tabMetadata = metadataResponse.metadata || [];
 
     } catch (error) {
       console.error('Error loading data:', error);
     }
+  }
+
+  async refreshData() {
+    await this.loadData();
+    this.render();
   }
 
   async sendMessage(message) {
@@ -90,194 +91,77 @@ class PopupInterface {
 
   render() {
     this.renderStats();
-    this.renderContextList();
+    this.renderGroupList();
   }
 
-  renderStats() {
-    // Count total tabs
-    chrome.tabs.query({}, (tabs) => {
-      document.getElementById('totalTabs').textContent = tabs.length;
-    });
-
-    // Total contexts
-    document.getElementById('totalContexts').textContent = this.contexts.length;
-
-    // Active context
-    const activeContextName = this.currentContext ?
-      this.currentContext.name.substring(0, 8) + (this.currentContext.name.length > 8 ? '...' : '') :
-      'None';
-    document.getElementById('activeContext').textContent = activeContextName;
+  async renderStats() {
+    try {
+      const windowId = await this.getActiveWindowId();
+      chrome.tabs.query({ windowId: windowId }, (tabs) => {
+        const totalTabsElement = document.getElementById('totalTabs');
+        if (totalTabsElement) {
+          totalTabsElement.textContent = tabs.length;
+        }
+      });
+    } catch (error) {
+      console.error('Error rendering stats:', error);
+    }
   }
 
-  renderContextList() {
-    const contextList = document.getElementById('contextList');
+  renderGroupList() {
+    const groupList = document.getElementById('groupList');
 
-    if (this.contexts.length === 0) {
-      contextList.innerHTML = `
+    if (this.groups.length === 0) {
+      groupList.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">🚀</div>
             <div class="empty-state-text">
-              No workspaces yet.<br>
-              Start browsing to automatically create contexts,<br>
-              or save your current tabs as a workspace.
+              No active tab groups.<br>
+              Use "Auto-Organize" to group your tabs with AI,<br>
+              or right-click a tab to create a group manually.
             </div>
           </div>
         `;
       return;
     }
 
-    // Sort contexts by last used
-    const sortedContexts = [...this.contexts].sort((a, b) =>
-      (b.lastUsed || 0) - (a.lastUsed || 0)
-    );
-
-    contextList.innerHTML = sortedContexts.map(context => `
-        <div class="context-item ${context.id === this.currentContext?.id ? 'active' : ''}" 
-             data-context-id="${context.id}">
-          <div class="context-name">${this.escapeHtml(context.name)}</div>
+    groupList.innerHTML = this.groups.map(group => `
+        <div class="context-item" 
+             data-group-id="${group.id}">
+          <div class="context-name">${this.escapeHtml(group.title || 'unnamed group')}</div>
           <div class="context-meta">
             <div class="context-tabs">
-              <span class="tab-count">${context.tabs?.length || 0} tabs</span>
-              <span>${context.category || 'general'}</span>
+              <span class="tab-count">${group.tabCount} tabs</span>
             </div>
             <div class="context-actions">
-              <button onclick="event.stopPropagation(); popupInterface.loadContext('${context.id}')" title="Load Context">
-                🔄
-              </button>
-              <button onclick="event.stopPropagation(); popupInterface.shareContext('${context.id}')" title="Share Context">
-                📤
-              </button>
-              <button onclick="event.stopPropagation(); popupInterface.deleteContext('${context.id}')" title="Delete Context">
-                🗑️
+              <button onclick="event.stopPropagation(); popupInterface.focusGroup(${group.id})" title="Expand & Focus">
+                🎯
               </button>
             </div>
           </div>
         </div>
       `).join('');
 
-    // Add click listeners for context items
-    contextList.querySelectorAll('.context-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        if (!e.target.closest('button')) {
-          const contextId = item.dataset.contextId;
-          this.loadContext(contextId);
-        }
+    // Add click listeners for group items
+    groupList.querySelectorAll('.context-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const groupId = parseInt(item.dataset.groupId);
+        this.focusGroup(groupId);
       });
     });
   }
 
-  async saveCurrentContext() {
-    const contextName = prompt('Enter workspace name:');
-    if (!contextName) return;
-
+  async focusGroup(groupId) {
     try {
-      // Get current tabs
-      const tabs = await new Promise(resolve =>
-        chrome.tabs.query({ currentWindow: true }, resolve)
-      );
-
-      const contextData = {
-        name: contextName,
-        tabs: tabs.map(tab => ({
-          url: tab.url,
-          title: tab.title,
-          pinned: tab.pinned,
-          favIconUrl: tab.favIconUrl
-        })),
-        created: Date.now(),
-        type: 'manual'
-      };
-
-      const response = await this.sendMessage({
-        action: 'saveContext',
-        data: contextData
-      });
-
-      if (response.success) {
-        this.showNotification('✅ Workspace saved successfully!');
-        await this.loadData();
-        this.render();
-      } else {
-        this.showNotification('❌ Failed to save workspace');
+      const tabs = await chrome.tabs.query({ groupId: groupId });
+      if (tabs.length > 0) {
+        // Focus the first tab in the group
+        await chrome.tabs.update(tabs[0].id, { active: true });
+        // Always ensure the group is expanded when focusing
+        await chrome.tabGroups.update(groupId, { collapsed: false });
       }
     } catch (error) {
-      console.error('Error saving context:', error);
-      this.showNotification('❌ Error saving workspace');
-    }
-  }
-
-  async loadContext(contextId) {
-    try {
-      const response = await this.sendMessage({
-        action: 'loadContext',
-        contextId
-      });
-
-      if (response.success) {
-        this.showNotification('🔄 Workspace loaded!');
-        // Close popup after loading context
-        setTimeout(() => window.close(), 1000);
-      } else {
-        this.showNotification('❌ Failed to load workspace');
-      }
-    } catch (error) {
-      console.error('Error loading context:', error);
-      this.showNotification('❌ Error loading workspace');
-    }
-  }
-
-  async deleteContext(contextId) {
-    if (!confirm('Are you sure you want to delete this workspace?')) {
-      return;
-    }
-
-    try {
-      const response = await this.sendMessage({
-        action: 'deleteContext',
-        contextId
-      });
-
-      if (response.success) {
-        this.showNotification('🗑️ Workspace deleted');
-        await this.loadData();
-        this.render();
-      } else {
-        this.showNotification('❌ Failed to delete workspace');
-      }
-    } catch (error) {
-      console.error('Error deleting context:', error);
-      this.showNotification('❌ Error deleting workspace');
-    }
-  }
-
-  async shareContext(contextId) {
-    const context = this.contexts.find(c => c.id === contextId);
-    if (!context) return;
-
-    // Create shareable data
-    const shareData = {
-      name: context.name,
-      tabs: context.tabs.map(tab => ({
-        url: tab.url,
-        title: tab.title
-      })),
-      created: context.created,
-      sharedAt: Date.now()
-    };
-
-    // Copy to clipboard
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(shareData, null, 2));
-      this.showNotification('📋 Workspace copied to clipboard!');
-    } catch (error) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = JSON.stringify(shareData, null, 2);
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      this.showNotification('📋 Workspace copied to clipboard!');
+      console.error('Error focusing group:', error);
     }
   }
 
@@ -289,6 +173,7 @@ class PopupInterface {
 
       if (response && response.success) {
         this.showNotification('✨ All tabs perfectly organized!');
+        await this.refreshData();
       } else {
         this.showNotification('❌ Waiting for AI Key (Check AI Settings)');
       }
@@ -300,9 +185,8 @@ class PopupInterface {
 
   async cleanupTabs() {
     try {
-      const tabs = await new Promise(resolve =>
-        chrome.tabs.query({}, resolve)
-      );
+      const windowId = await this.getActiveWindowId();
+      const tabs = await chrome.tabs.query({ windowId: windowId });
 
       // Find duplicate tabs
       const urlMap = new Map();
@@ -321,162 +205,15 @@ class PopupInterface {
       });
 
       if (duplicates.length > 0) {
-        await new Promise(resolve =>
-          chrome.tabs.remove(duplicates, resolve)
-        );
+        await chrome.tabs.remove(duplicates);
         this.showNotification(`🧹 Removed ${duplicates.length} duplicate tabs`);
+        await this.refreshData();
       } else {
         this.showNotification('✨ No duplicates found!');
       }
     } catch (error) {
       console.error('Error cleaning up tabs:', error);
       this.showNotification('❌ Error cleaning up tabs');
-    }
-  }
-
-  async suspendInactiveTabs() {
-    try {
-      const tabs = await new Promise(resolve =>
-        chrome.tabs.query({}, resolve)
-      );
-
-      // Get current active tab
-      const [activeTab] = await new Promise(resolve =>
-        chrome.tabs.query({ active: true, currentWindow: true }, resolve)
-      );
-
-      // Find tabs that haven't been active recently
-      const inactiveTabs = tabs.filter(tab =>
-        !tab.active &&
-        !tab.pinned &&
-        tab.id !== activeTab.id &&
-        !tab.url.startsWith('chrome://') &&
-        !tab.url.startsWith('chrome-extension://')
-      );
-
-      let suspendedCount = 0;
-      for (const tab of inactiveTabs) {
-        try {
-          // Inject a script to replace the page content with a suspended state
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: this.suspendTabContent,
-            args: [tab.title, tab.url, tab.favIconUrl]
-          });
-          suspendedCount++;
-        } catch (error) {
-          console.log('Could not suspend tab:', tab.url);
-        }
-      }
-
-      this.showNotification(`⏸️ Suspended ${suspendedCount} inactive tabs`);
-    } catch (error) {
-      console.error('Error suspending tabs:', error);
-      this.showNotification('❌ Error suspending tabs');
-    }
-  }
-
-  suspendTabContent(title, originalUrl, favIconUrl) {
-    // This function runs in the context of the suspended tab
-    document.documentElement.innerHTML = `
-        <html>
-          <head>
-            <title>💤 ${title}</title>
-            <link rel="icon" href="${favIconUrl || '/favicon.ico'}">
-            <style>
-              body {
-                margin: 0;
-                padding: 40px;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-              }
-              .container {
-                text-align: center;
-                background: white;
-                padding: 40px;
-                border-radius: 12px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-                max-width: 500px;
-              }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              h1 { color: #333; margin-bottom: 10px; font-size: 24px; }
-              p { color: #666; margin-bottom: 30px; line-height: 1.5; }
-              .url { 
-                background: #f8f9fa; 
-                padding: 10px; 
-                border-radius: 6px; 
-                font-family: monospace; 
-                font-size: 12px; 
-                word-break: break-all;
-                margin-bottom: 30px;
-              }
-              button {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 16px;
-                font-weight: 600;
-                transition: transform 0.2s ease;
-              }
-              button:hover { transform: translateY(-2px); }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">💤</div>
-              <h1>Tab Suspended</h1>
-              <p>This tab has been suspended to save memory and improve performance.</p>
-              <div class="url">${originalUrl}</div>
-              <button onclick="window.location.reload()">Restore Tab</button>
-            </div>
-          </body>
-        </html>
-      `;
-  }
-
-  async exportCurrentContext() {
-    try {
-      const tabs = await new Promise(resolve =>
-        chrome.tabs.query({ currentWindow: true }, resolve)
-      );
-
-      const exportData = {
-        name: `Export-${new Date().toLocaleDateString()}`,
-        tabs: tabs.map(tab => ({
-          title: tab.title,
-          url: tab.url,
-          pinned: tab.pinned
-        })),
-        exported: new Date().toISOString(),
-        tabCount: tabs.length
-      };
-
-      // Create downloadable file
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json'
-      });
-      const url = URL.createObjectURL(blob);
-
-      // Trigger download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `workspaceflow-export-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      this.showNotification('📤 Context exported successfully!');
-    } catch (error) {
-      console.error('Error exporting context:', error);
-      this.showNotification('❌ Error exporting context');
     }
   }
 
@@ -509,6 +246,7 @@ class PopupInterface {
   }
 
   escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;

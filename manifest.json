@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "WorkspaceFlow - Smart Tab Management",
     "version": "1.0.0",
-    "description": "Intelligent tab management and context switching for developers and knowledge workers",
+    "description": "Intelligent AI-powered tab group organization and management",
     
     "permissions": [
       "tabs",
@@ -33,7 +33,7 @@
     
     "action": {
       "default_popup": "popup.html",
-      "default_title": "WorkspaceFlow",
+      "default_title": "WorkspaceFlow - AI Tab Groups",
       "default_icon": {
         "16": "icons/icon16.png",
         "32": "icons/icon32.png",
@@ -50,20 +50,6 @@
     },
     
     "commands": {
-      "save-context": {
-        "suggested_key": {
-          "default": "Ctrl+Shift+S",
-          "mac": "Command+Shift+S"
-        },
-        "description": "Save current workspace context"
-      },
-      "switch-context": {
-        "suggested_key": {
-          "default": "Ctrl+Shift+W",
-          "mac": "Command+Shift+W"
-        },
-        "description": "Quick switch workspace context"
-      },
       "toggle-popup": {
         "suggested_key": {
           "default": "Ctrl+Shift+T",

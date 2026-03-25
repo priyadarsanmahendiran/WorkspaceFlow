@@ -1,8 +1,6 @@
 // WorkspaceFlow Background Service Worker
 class WorkspaceFlowManager {
   constructor() {
-    this.contexts = new Map();
-    this.currentContext = null;
     this.tabMetadata = new Map();
     this.aiCategoryCache = new Map();
     this.geminiApiKey = '';
@@ -20,9 +18,6 @@ class WorkspaceFlowManager {
     // Load saved data
     await this.loadStoredData();
     this.readyComplete = true;
-
-    // Initialize current session
-    await this.detectCurrentContext();
 
     console.log('WorkspaceFlow initialized');
   }
@@ -50,13 +45,11 @@ class WorkspaceFlowManager {
   async onTabCreated(tab) {
     console.log('Tab created:', tab.url);
     await this.analyzeTab(tab);
-    await this.updateContexts();
   }
 
   async onTabRemoved(tabId) {
     console.log('Tab removed:', tabId);
     this.tabMetadata.delete(tabId);
-    await this.updateContexts();
   }
 
   async onTabUpdated(tabId, changeInfo, tab) {
@@ -65,7 +58,6 @@ class WorkspaceFlowManager {
     if (changeInfo.url || changeInfo.title) {
       console.log('Tab updated:', tab.url);
       await this.analyzeTab(tab);
-      await this.updateContexts();
     }
 
     // Auto-group based on AI categorization when navigation occurs
@@ -103,51 +95,21 @@ class WorkspaceFlowManager {
   }
 
   async onWindowFocusChanged(windowId) {
-    if (windowId !== chrome.windows.WINDOW_ID_NONE) {
-      await this.detectCurrentContext();
-    }
+    // No longer detecting current context
   }
 
   async onCommand(command) {
     switch (command) {
-      case 'save-context':
-        await this.saveCurrentContext();
-        break;
-      case 'switch-context':
-        await this.showContextSwitcher();
-        break;
       case 'toggle-popup':
         // This will be handled by the popup itself
         break;
+      // save-context and switch-context are removed
     }
   }
 
   async handleMessage(message, sender, sendResponse) {
     try {
       switch (message.action) {
-        case 'getContexts':
-          sendResponse({ contexts: Array.from(this.contexts.values()) });
-          break;
-
-        case 'getCurrentContext':
-          sendResponse({ context: this.currentContext });
-          break;
-
-        case 'saveContext':
-          const result = await this.saveContext(message.data);
-          sendResponse({ success: true, context: result });
-          break;
-
-        case 'loadContext':
-          await this.loadContext(message.contextId);
-          sendResponse({ success: true });
-          break;
-
-        case 'deleteContext':
-          await this.deleteContext(message.contextId);
-          sendResponse({ success: true });
-          break;
-
         case 'getTabMetadata':
           sendResponse({ metadata: Array.from(this.tabMetadata.entries()) });
           break;
@@ -183,15 +145,12 @@ class WorkspaceFlowManager {
     const aiCategory = this.aiCategoryCache.get(domain);
     const category = aiCategory || this.categorizeUrl(tab.url);
 
-    const project = this.detectProject(tab.url, tab.title);
-
     const metadata = {
       id: tab.id,
       url: tab.url,
       title: tab.title,
       domain,
       category,
-      project,
       lastAccessed: Date.now(),
       timeSpent: 0,
       visits: (this.tabMetadata.get(tab.id)?.visits || 0) + 1
@@ -306,7 +265,11 @@ class WorkspaceFlowManager {
     if (!this.geminiApiKey) {
       return { success: false, error: 'No API Key' };
     }
-    const tabs = await chrome.tabs.query({ currentWindow: true });
+    
+    // Get the most recently focused window to organize
+    const window = await chrome.windows.getLastFocused({ populate: false });
+    const tabs = await chrome.tabs.query({ windowId: window.id });
+    
     for (const tab of tabs) {
       await this.groupTabWithAI(tab);
     }
@@ -374,131 +337,6 @@ class WorkspaceFlowManager {
     return 'general';
   }
 
-  detectProject(url, title) {
-    // Simple project detection based on common patterns
-    const projectPatterns = [
-      // GitHub repos
-      /github\.com\/([^\/]+)\/([^\/]+)/,
-      // Local development
-      /localhost:(\d+)/,
-      // Project names in titles
-      /(\w+(?:-\w+)*)\s*[-–—]\s*/
-    ];
-
-    for (const pattern of projectPatterns) {
-      const match = url.match(pattern) || title?.match(pattern);
-      if (match) {
-        return match[1] || match[2] || 'unknown-project';
-      }
-    }
-
-    return 'general';
-  }
-
-  async updateContexts() {
-    const tabs = await chrome.tabs.query({});
-    const contextGroups = new Map();
-
-    // Group tabs by project and category
-    for (const tab of tabs) {
-      const metadata = this.tabMetadata.get(tab.id);
-      if (!metadata) continue;
-
-      const contextKey = `${metadata.project}-${metadata.category}`;
-
-      if (!contextGroups.has(contextKey)) {
-        contextGroups.set(contextKey, {
-          id: contextKey,
-          name: `${metadata.project} (${metadata.category})`,
-          project: metadata.project,
-          category: metadata.category,
-          tabs: [],
-          lastUsed: 0,
-          totalTimeSpent: 0
-        });
-      }
-
-      const context = contextGroups.get(contextKey);
-      context.tabs.push(metadata);
-      context.lastUsed = Math.max(context.lastUsed, metadata.lastAccessed);
-      context.totalTimeSpent += metadata.timeSpent;
-    }
-
-    this.contexts = contextGroups;
-    await this.saveStoredData();
-  }
-
-  async detectCurrentContext() {
-    try {
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!activeTab) return;
-
-      const metadata = this.tabMetadata.get(activeTab.id);
-      if (metadata) {
-        const contextKey = `${metadata.project}-${metadata.category}`;
-        this.currentContext = this.contexts.get(contextKey);
-      }
-    } catch (error) {
-      console.error('Error detecting current context:', error);
-    }
-  }
-
-  async saveCurrentContext() {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-    const contextName = prompt('Enter context name:') || `Context-${Date.now()}`;
-
-    const context = {
-      id: `custom-${Date.now()}`,
-      name: contextName,
-      tabs: tabs.map(tab => ({
-        url: tab.url,
-        title: tab.title,
-        pinned: tab.pinned
-      })),
-      created: Date.now(),
-      type: 'saved'
-    };
-
-    this.contexts.set(context.id, context);
-    await this.saveStoredData();
-
-    // Show notification
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'WorkspaceFlow',
-      message: `Context "${contextName}" saved successfully!`
-    });
-  }
-
-  async loadContext(contextId) {
-    const context = this.contexts.get(contextId);
-    if (!context) return;
-
-    // Close current tabs (optional - could be a setting)
-    const currentTabs = await chrome.tabs.query({ currentWindow: true });
-    for (const tab of currentTabs) {
-      if (!tab.pinned) {
-        chrome.tabs.remove(tab.id);
-      }
-    }
-
-    // Open context tabs
-    for (const tabData of context.tabs) {
-      await chrome.tabs.create({
-        url: tabData.url,
-        pinned: tabData.pinned || false
-      });
-    }
-
-    this.currentContext = context;
-  }
-
-  async deleteContext(contextId) {
-    this.contexts.delete(contextId);
-    await this.saveStoredData();
-  }
-
   async updateLastAccessed(tabId) {
     const metadata = this.tabMetadata.get(tabId);
     if (metadata) {
@@ -507,18 +345,9 @@ class WorkspaceFlowManager {
     }
   }
 
-  async showContextSwitcher() {
-    // This will trigger the popup to show context switcher
-    chrome.action.openPopup();
-  }
-
   async loadStoredData() {
     try {
-      const data = await chrome.storage.local.get(['contexts', 'tabMetadata', 'geminiApiKey', 'autoGroupEnabled', 'aiCategoryCache']);
-
-      if (data.contexts) {
-        this.contexts = new Map(Object.entries(data.contexts));
-      }
+      const data = await chrome.storage.local.get(['tabMetadata', 'geminiApiKey', 'autoGroupEnabled', 'aiCategoryCache']);
 
       if (data.tabMetadata) {
         this.tabMetadata = new Map(Object.entries(data.tabMetadata).map(([k, v]) => [parseInt(k), v]));
@@ -538,7 +367,6 @@ class WorkspaceFlowManager {
   async saveStoredData() {
     try {
       await chrome.storage.local.set({
-        contexts: Object.fromEntries(this.contexts),
         tabMetadata: Object.fromEntries(this.tabMetadata),
         aiCategoryCache: Object.fromEntries(this.aiCategoryCache)
       });
