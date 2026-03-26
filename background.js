@@ -171,8 +171,8 @@ class WorkspaceFlowManager {
       return this.aiCategoryCache.get(domain);
     }
 
-    const prompt = `You are a productivity assistant classifying web pages into concise group names for Chrome Tab Groups. 
-  Categorize the following webpage.
+    const prompt = `You are an assistant classifying web pages into concise group names for Chrome Tab Groups. 
+  Categorize the following webpage based on it's context.
   URL: ${url}
   Title: ${title}
   
@@ -265,11 +265,11 @@ class WorkspaceFlowManager {
     if (!this.geminiApiKey) {
       return { success: false, error: 'No API Key' };
     }
-    
+
     // Get the most recently focused window to organize
     const window = await chrome.windows.getLastFocused({ populate: false });
     const tabs = await chrome.tabs.query({ windowId: window.id });
-    
+
     for (const tab of tabs) {
       await this.groupTabWithAI(tab);
     }
