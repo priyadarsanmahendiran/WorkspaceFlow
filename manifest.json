@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "WorkspaceFlow - Smart Tab Management",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Intelligent AI-powered tab group organization and management",
     
     "permissions": [
